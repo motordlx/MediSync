@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "start": "npm --prefix server start",
-    "build": "npm --prefix server install && npm --prefix client install --include=dev && npm --prefix client run build",
+    "build": "npm --prefix server install && npm --prefix client install --include=dev --include=optional && npm --prefix client run build",
     "dev": "concurrently -n \"server,worker,client\" -c \"blue,magenta,green\" \"npm run dev --prefix server\" \"npm run worker --prefix server\" \"npm run dev --prefix client\"",
     "dev:server": "npm run dev --prefix server",
     "dev:worker": "npm run worker --prefix server",
@@ -15,7 +15,7 @@
     "test:client": "npm run test --prefix client"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.5"
