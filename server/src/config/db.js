@@ -16,9 +16,10 @@ export const connectDB = async () => {
   // 1. Try connecting to the configured URI (e.g. mongodb://localhost:27017/medisync)
   try {
     await mongoose.connect(config.mongodbUri, {
-      serverSelectionTimeoutMS: 1500,
+      serverSelectionTimeoutMS: 8000,
     });
-    console.log(`[DB] Connected to MongoDB at ${config.mongodbUri}`);
+    const sanitizedUri = config.mongodbUri.replace(/:([^:@]+)@/, ':****@');
+    console.log(`[DB] Connected to MongoDB at ${sanitizedUri}`);
     return;
   } catch (err) {
     if (config.nodeEnv === 'production') {
@@ -92,4 +93,3 @@ export const disconnectDB = async () => {
     console.error('[DB] Error during disconnect:', err.message);
   }
 };
-1

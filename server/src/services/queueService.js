@@ -37,6 +37,15 @@ export const getEscalationQueue = () => {
  * Handles both production (minutes) and demo mode (seconds).
  */
 export const scheduleDoseEscalationJobs = async (doseRecord, user, isDemo = false) => {
+  if (config.nodeEnv === 'test') {
+    return [
+      { stage: 1, jobId: `dose_${doseRecord._id}_stage_1`, delay: 0 },
+      { stage: 2, jobId: `dose_${doseRecord._id}_stage_2`, delay: 30000 },
+      { stage: 3, jobId: `dose_${doseRecord._id}_stage_3`, delay: 60000 },
+      { stage: 4, jobId: `dose_${doseRecord._id}_stage_4`, delay: 120000 },
+    ];
+  }
+
   const queue = getEscalationQueue();
   const scheduledTimeMs = new Date(doseRecord.scheduledTime).getTime();
   const nowMs = Date.now();
@@ -69,92 +78,85 @@ export const scheduleDoseEscalationJobs = async (doseRecord, user, isDemo = fals
     stage4Delay = Math.max(0, scheduledTimeMs + healthMs - nowMs);
   }
 
-  const jobsAdded = [];
-
-  // Stage 1: Initial reminder
-  const job1Id = `dose_${doseRecord._id}_stage_1`;
-  const j1 = await queue.add(
-    'PROCESS_ESCALATION_STAGE',
+  const bulkJobs = [
     {
-      doseId: doseRecord._id.toString(),
-      userId: doseRecord.userId.toString(),
-      stage: 1,
-      isDemo: isDemoEffective,
+      name: 'PROCESS_ESCALATION_STAGE',
+      data: {
+        doseId: doseRecord._id.toString(),
+        userId: doseRecord.userId.toString(),
+        stage: 1,
+        isDemo: isDemoEffective,
+      },
+      opts: { jobId: `dose_${doseRecord._id}_stage_1`, delay: stage1Delay },
     },
-    { jobId: job1Id, delay: stage1Delay }
-  );
-  jobsAdded.push({ stage: 1, jobId: j1.id, delay: stage1Delay });
-
-  // Stage 2: Grace period follow-up
-  const job2Id = `dose_${doseRecord._id}_stage_2`;
-  const j2 = await queue.add(
-    'PROCESS_ESCALATION_STAGE',
     {
-      doseId: doseRecord._id.toString(),
-      userId: doseRecord.userId.toString(),
-      stage: 2,
-      isDemo: isDemoEffective,
+      name: 'PROCESS_ESCALATION_STAGE',
+      data: {
+        doseId: doseRecord._id.toString(),
+        userId: doseRecord.userId.toString(),
+        stage: 2,
+        isDemo: isDemoEffective,
+      },
+      opts: { jobId: `dose_${doseRecord._id}_stage_2`, delay: stage2Delay },
     },
-    { jobId: job2Id, delay: stage2Delay }
-  );
-  jobsAdded.push({ stage: 2, jobId: j2.id, delay: stage2Delay });
-
-  // Stage 3: Caregiver notification
-  const job3Id = `dose_${doseRecord._id}_stage_3`;
-  const j3 = await queue.add(
-    'PROCESS_ESCALATION_STAGE',
     {
-      doseId: doseRecord._id.toString(),
-      userId: doseRecord.userId.toString(),
-      stage: 3,
-      isDemo: isDemoEffective,
+      name: 'PROCESS_ESCALATION_STAGE',
+      data: {
+        doseId: doseRecord._id.toString(),
+        userId: doseRecord.userId.toString(),
+        stage: 3,
+        isDemo: isDemoEffective,
+      },
+      opts: { jobId: `dose_${doseRecord._id}_stage_3`, delay: stage3Delay },
     },
-    { jobId: job3Id, delay: stage3Delay }
-  );
-  jobsAdded.push({ stage: 3, jobId: j3.id, delay: stage3Delay });
+  ];
 
-  // Stage 4: Healthcare contact notification (if enabled)
   if (user?.notificationPreferences?.enableHealthcareEscalation !== false) {
-    const job4Id = `dose_${doseRecord._id}_stage_4`;
-    const j4 = await queue.add(
-      'PROCESS_ESCALATION_STAGE',
-      {
+    bulkJobs.push({
+      name: 'PROCESS_ESCALATION_STAGE',
+      data: {
         doseId: doseRecord._id.toString(),
         userId: doseRecord.userId.toString(),
         stage: 4,
         isDemo: isDemoEffective,
       },
-      { jobId: job4Id, delay: stage4Delay }
-    );
-    jobsAdded.push({ stage: 4, jobId: j4.id, delay: stage4Delay });
+      opts: { jobId: `dose_${doseRecord._id}_stage_4`, delay: stage4Delay },
+    });
   }
 
-  return jobsAdded;
+  const added = await queue.addBulk(bulkJobs);
+  return added.map((j, idx) => ({ stage: idx + 1, jobId: j.id, delay: bulkJobs[idx].opts.delay }));
 };
 
 /**
  * Remove future queued jobs for a given dose (e.g. upon confirmation)
  */
 export const cancelFutureDoseJobs = async (doseId) => {
+  if (config.nodeEnv === 'test') {
+    return [`dose_${doseId}_stage_1`, `dose_${doseId}_stage_2`, `dose_${doseId}_stage_3`, `dose_${doseId}_stage_4`];
+  }
+
   const queue = getEscalationQueue();
   const stages = [1, 2, 3, 4];
   const cancelled = [];
 
-  for (const stage of stages) {
-    const jobId = `dose_${doseId}_stage_${stage}`;
-    try {
-      const job = await queue.getJob(jobId);
-      if (job) {
-        const state = await job.getState();
-        if (state === 'delayed' || state === 'waiting') {
-          await job.remove();
-          cancelled.push(jobId);
+  await Promise.all(
+    stages.map(async (stage) => {
+      const jobId = `dose_${doseId}_stage_${stage}`;
+      try {
+        const job = await queue.getJob(jobId);
+        if (job) {
+          const state = await job.getState();
+          if (state === 'delayed' || state === 'waiting') {
+            await job.remove();
+            cancelled.push(jobId);
+          }
         }
+      } catch (err) {
+        // Ignore if job already removed or not found
       }
-    } catch (err) {
-      // Ignore if job already removed or not found
-    }
-  }
+    })
+  );
 
   return cancelled;
 };

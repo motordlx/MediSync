@@ -15,7 +15,8 @@ export const getRedisConnection = () => {
     });
 
     redisClient.on('connect', () => {
-      console.log(`[Redis] Connected to ${config.redisUrl}`);
+      const sanitizedUrl = config.redisUrl.replace(/:([^:@]+)@/, ':****@');
+      console.log(`[Redis] Connected to ${sanitizedUrl}`);
     });
 
     redisClient.on('error', (err) => {
