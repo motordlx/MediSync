@@ -1,0 +1,19 @@
+{
+  "name": "medisync",
+  "version": "1.0.0",
+  "description": "Smart medicine reminder and medication adherence monitoring platform with notification escalation",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"server,worker,client\" -c \"blue,magenta,green\" \"npm run dev --prefix server\" \"npm run worker --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:worker": "npm run worker --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "test": "npm run test --prefix server && npm run test --prefix client",
+    "test:server": "npm run test --prefix server",
+    "test:client": "npm run test --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}
