@@ -1,5 +1,6 @@
 import { NotificationLog } from '../models/NotificationLog.js';
 import { AuditEvent } from '../models/AuditEvent.js';
+import { verifyAndSendTestEmail } from '../services/emailService.js';
 
 export const getNotificationLogs = async (req, res, next) => {
   try {
@@ -64,6 +65,29 @@ export const getAuditEvents = async (req, res, next) => {
         totalPages: Math.ceil(total / limitNum),
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const testEmailConnection = async (req, res, next) => {
+  try {
+    const targetEmail = req.body?.email || req.user.email;
+    const result = await verifyAndSendTestEmail(targetEmail);
+
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        details: result.details,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: result.message || 'Email delivery failed.',
+        code: result.code,
+      });
+    }
   } catch (error) {
     next(error);
   }

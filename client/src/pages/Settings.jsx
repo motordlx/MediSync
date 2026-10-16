@@ -57,6 +57,26 @@ export const Settings = () => {
     user?.notificationPreferences?.enableHealthcareEscalation !== false
   );
 
+  // Email Diagnostic State
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  const handleTestEmail = async () => {
+    setTestingEmail(true);
+    setTestResult(null);
+    try {
+      const res = await api.post('/notifications/test-email');
+      setTestResult({ success: true, message: res.data.message });
+      setToastMessage('✅ Test email dispatched! Please check your inbox.');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to dispatch test email.';
+      setTestResult({ success: false, message: msg });
+      setToastMessage('❌ Email test failed. See diagnostic details below.');
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setName(user.name || '');
@@ -280,6 +300,44 @@ export const Settings = () => {
               <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
             </label>
           </div>
+        </div>
+
+        {/* Email Delivery Diagnostics Card */}
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <Bell className="w-5 h-5 text-teal-600" />
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Email Delivery Diagnostics</h3>
+                <p className="text-xs text-slate-500">
+                  Verify that your SMTP provider can dispatch notification emails to your address.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={testingEmail}
+              onClick={handleTestEmail}
+              className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
+            >
+              {testingEmail ? 'Sending Test...' : 'Send Test Email'}
+            </button>
+          </div>
+
+          {testResult && (
+            <div
+              className={`p-3.5 rounded-xl text-xs ${
+                testResult.success
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border border-rose-200 text-rose-800'
+              }`}
+            >
+              <div className="font-bold mb-1">
+                {testResult.success ? '✅ Success' : '❌ Email Error'}
+              </div>
+              <p className="text-xs leading-relaxed">{testResult.message}</p>
+            </div>
+          )}
         </div>
 
         {/* Legal / Medical Disclaimer Box */}

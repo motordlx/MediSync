@@ -102,6 +102,7 @@ export const processEscalationStage = async (doseId, stage, isDemo = false, jobI
       status: deliveryOutcome.status || 'ATTEMPTED',
       subject: 'MediSync - Your medicine reminder',
       contentSnippet: `Dose reminder for ${scheduledTimeFormatted}`,
+      errorMessage: deliveryOutcome.errorMessage || null,
       idempotencyKey,
       jobId,
     });
@@ -170,6 +171,7 @@ export const processEscalationStage = async (doseId, stage, isDemo = false, jobI
       status: deliveryOutcome.status || 'ATTEMPTED',
       subject: 'MediSync - Follow-up: Dose Awaiting Confirmation',
       contentSnippet: `Follow-up unconfirmed dose for ${scheduledTimeFormatted}`,
+      errorMessage: deliveryOutcome.errorMessage || null,
       idempotencyKey,
       jobId,
     });
@@ -251,6 +253,7 @@ export const processEscalationStage = async (doseId, stage, isDemo = false, jobI
         status: deliveryOutcome.status || 'ATTEMPTED',
         subject: `MediSync - Notification regarding ${user.name}'s schedule`,
         contentSnippet: `Caregiver notification for unconfirmed dose of ${user.name}`,
+        errorMessage: deliveryOutcome.errorMessage || null,
         idempotencyKey,
         jobId,
       });
@@ -330,6 +333,7 @@ export const processEscalationStage = async (doseId, stage, isDemo = false, jobI
         status: deliveryOutcome.status || 'ATTEMPTED',
         subject: `MediSync - Clinical Escalation Notice: ${user.name}`,
         contentSnippet: `Clinical escalation for extended unconfirmed dose of ${user.name}`,
+        errorMessage: deliveryOutcome.errorMessage || null,
         idempotencyKey,
         jobId,
       });
